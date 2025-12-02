@@ -3,32 +3,64 @@ on: [push]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
       - uses: actions/checkout@v4
 
-      # 1. Чистим место
-      - name: Free Disk Space
+      # 1. Устанавливаем зависимости ТОЛЬКО те, которые 100% нужны и работают
+      - name: Install dependencies
         run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf "/usr/local/share/boost"
-          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          sudo apt-get update
+          sudo apt-get install -y \
+            python3-pip \
+            build-essential \
+            git \
+            python3 \
+            python3-dev \
+            ffmpeg \
+            libsdl2-dev \
+            libsdl2-image-dev \
+            libsdl2-mixer-dev \
+            libsdl2-ttf-dev \
+            libportmidi-dev \
+            libswscale-dev \
+            libavformat-dev \
+            libavcodec-dev \
+            zlib1g-dev \
+            libgstreamer1.0 \
+            gstreamer1.0-plugins-base \
+            gstreamer1.0-plugins-good \
+            openjdk-17-jdk \
+            unzip \
+            autoconf \
+            libtool \
+            pkg-config \
+            libncurses5-dev \
+            libncursesw5-dev \
+            libtinfo5 \
+            cmake \
+            libffi-dev \
+            libssl-dev \
+            zip
 
-      # 2. Запускаем сборку в официальном Docker-контейнере
-      # Ключевое исправление: BUILDOZER_WARN_ON_ROOT=0 отключает вопрос "Are you sure?"
-      - name: Build with Buildozer via Docker
-        uses: docker://kivy/buildozer:latest
-        with:
-          args: buildozer android debug
-        env:
-          # Отключаем предупреждение о root, из-за которого всё падало
-          BUILDOZER_WARN_ON_ROOT: 0
-          # Автоматически соглашаемся со всем
-          PACKAGES_PATH: /root/.buildozer/android/packages
+      # 2. Устанавливаем Buildozer (без sudo, чтобы был в user-space)
+      - name: Install Buildozer
+        run: |
+          pip3 install --upgrade pip
+          pip3 install --user --upgrade buildozer cython==0.29.33
 
-      # 3. Выгружаем APK
+      # 3. Добавляем путь к pip в PATH
+      - name: Add user bin to PATH
+        run: echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      # 4. Сборка с принудительным "yes"
+      # Мы удаляем старую папку buildozer, если она есть, и запускаем с нуля
+      - name: Build APK
+        run: |
+          yes | buildozer android debug
+
+      # 5. Выгружаем файл
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
