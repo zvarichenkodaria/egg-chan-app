@@ -1,20 +1,31 @@
 name: Build APK
 on: [push]
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4  # Обновили checkout до v4
-      
+      - uses: actions/checkout@v4
+
+      # 1. Создаем пользователя "user" вручную, чтобы buildozer не падал
+      - name: Fix permissions for Buildozer
+        run: |
+          sudo useradd -m user
+          sudo mkdir -p /github/workspace
+          sudo chown -R user:user /github/workspace
+
+      # 2. Собираем APK
       - name: Build with Buildozer
         uses: ArtemSBulgakov/buildozer-action@v1
         id: buildozer
         with:
           command: buildozer android debug
           buildozer_version: stable
-          
+          workdir: .
+
+      # 3. Загружаем результат
       - name: Upload APK
-        uses: actions/upload-artifact@v4  # ВОТ ЗДЕСЬ БЫЛА ОШИБКА (v2 -> v4)
+        uses: actions/upload-artifact@v4
         with:
           name: egg-chan-apk
           path: bin/*.apk
