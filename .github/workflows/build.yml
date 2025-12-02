@@ -3,12 +3,12 @@ on: [push]
 
 jobs:
   build:
-    runs-on: ubuntu-22.04  # Используем стабильную версию Ubuntu
+    runs-on: ubuntu-20.04  # Используем старую стабильную версию (это решает проблему!)
 
     steps:
       - uses: actions/checkout@v4
 
-      # 1. Освобождаем место (на всякий случай, Android SDK тяжелый)
+      # 1. Чистим место
       - name: Free Disk Space
         run: |
           sudo rm -rf /usr/share/dotnet
@@ -16,7 +16,7 @@ jobs:
           sudo rm -rf "/usr/local/share/boost"
           sudo rm -rf "$AGENT_TOOLSDIRECTORY"
 
-      # 2. Устанавливаем зависимости (вручную, чтобы точно работало)
+      # 2. Устанавливаем зависимости (для Ubuntu 20.04 они другие и стабильные)
       - name: Install system dependencies
         run: |
           sudo apt-get update
@@ -27,18 +27,21 @@ jobs:
             libswscale-dev libavformat-dev libavcodec-dev \
             zlib1g-dev libgstreamer1.0 \
             gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
-            openjdk-17-jdk unzip autoconf libtool pkg-config \
+            openjdk-11-jdk unzip autoconf libtool pkg-config \
             libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
 
-      # 3. Ставим сам Buildozer
+      # 3. Ставим Buildozer
       - name: Install Buildozer
-        run: pip3 install --upgrade buildozer cython==0.29.33
+        run: |
+          pip3 install --upgrade pip
+          pip3 install --upgrade buildozer cython==0.29.33
 
-      # 4. Запускаем сборку (yes | ... автоматически соглашается с лицензиями)
+      # 4. Собираем APK
       - name: Build APK
-        run: yes | buildozer android debug
+        run: |
+          yes | buildozer android debug
 
-      # 5. Загружаем готовый файл
+      # 5. Загружаем результат
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
