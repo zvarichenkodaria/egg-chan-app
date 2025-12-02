@@ -3,12 +3,12 @@ on: [push]
 
 jobs:
   build:
-    runs-on: ubuntu-20.04  # Используем старую стабильную версию (это решает проблему!)
+    runs-on: ubuntu-22.04
 
     steps:
       - uses: actions/checkout@v4
 
-      # 1. Чистим место
+      # 1. Освобождаем место
       - name: Free Disk Space
         run: |
           sudo rm -rf /usr/share/dotnet
@@ -16,32 +16,18 @@ jobs:
           sudo rm -rf "/usr/local/share/boost"
           sudo rm -rf "$AGENT_TOOLSDIRECTORY"
 
-      # 2. Устанавливаем зависимости (для Ubuntu 20.04 они другие и стабильные)
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            python3-pip build-essential git python3 \
-            python3-dev ffmpeg libsdl2-dev libsdl2-image-dev \
-            libsdl2-mixer-dev libsdl2-ttf-dev libportmidi-dev \
-            libswscale-dev libavformat-dev libavcodec-dev \
-            zlib1g-dev libgstreamer1.0 \
-            gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
-            openjdk-11-jdk unzip autoconf libtool pkg-config \
-            libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
+      # 2. Собираем через Docker (это решает ВСЕ проблемы с зависимостями)
+      # Мы используем официальный образ, где уже всё установлено
+      - name: Build with Buildozer via Docker
+        uses: docker://kivy/buildozer:latest
+        with:
+          args: buildozer android debug
+        env:
+          # Важно: прокидываем права, чтобы docker мог писать в папку
+          USER_ID: 1001
+          GROUP_ID: 1001
 
-      # 3. Ставим Buildozer
-      - name: Install Buildozer
-        run: |
-          pip3 install --upgrade pip
-          pip3 install --upgrade buildozer cython==0.29.33
-
-      # 4. Собираем APK
-      - name: Build APK
-        run: |
-          yes | buildozer android debug
-
-      # 5. Загружаем результат
+      # 3. Загружаем результат
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
