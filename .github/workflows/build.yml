@@ -3,12 +3,12 @@ on: [push]
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      # 1. Освобождаем место
+      # 1. Чистим место
       - name: Free Disk Space
         run: |
           sudo rm -rf /usr/share/dotnet
@@ -16,18 +16,19 @@ jobs:
           sudo rm -rf "/usr/local/share/boost"
           sudo rm -rf "$AGENT_TOOLSDIRECTORY"
 
-      # 2. Собираем через Docker (это решает ВСЕ проблемы с зависимостями)
-      # Мы используем официальный образ, где уже всё установлено
+      # 2. Запускаем сборку в официальном Docker-контейнере
+      # Ключевое исправление: BUILDOZER_WARN_ON_ROOT=0 отключает вопрос "Are you sure?"
       - name: Build with Buildozer via Docker
         uses: docker://kivy/buildozer:latest
         with:
           args: buildozer android debug
         env:
-          # Важно: прокидываем права, чтобы docker мог писать в папку
-          USER_ID: 1001
-          GROUP_ID: 1001
+          # Отключаем предупреждение о root, из-за которого всё падало
+          BUILDOZER_WARN_ON_ROOT: 0
+          # Автоматически соглашаемся со всем
+          PACKAGES_PATH: /root/.buildozer/android/packages
 
-      # 3. Загружаем результат
+      # 3. Выгружаем APK
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
