@@ -8,48 +8,43 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # 1. Ставим ТОЛЬКО то, что нужно для работы самого Buildozer
-      # Убрали весь "мусор" типа libgstreamer, который ломает сборку
-      - name: Install minimal dependencies
+      # 1. Чистим диск по максимуму
+      - name: Free Disk Space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+
+      # 2. Ставим только минимум зависимостей (без тяжелых медиа-библиотек)
+      - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            python3-pip \
-            build-essential \
-            git \
-            python3 \
-            python3-dev \
-            openjdk-17-jdk \
-            unzip \
-            autoconf \
-            libtool \
-            pkg-config \
-            zlib1g-dev \
-            libncurses5-dev \
-            libncursesw5-dev \
-            libtinfo5 \
-            cmake \
-            libffi-dev \
-            libssl-dev \
-            zip
+            python3-pip build-essential git python3 python3-dev \
+            openjdk-17-jdk unzip autoconf libtool pkg-config \
+            zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 \
+            cmake libffi-dev libssl-dev zip
 
-      # 2. Ставим Buildozer в папку пользователя
+      # 3. Ставим Buildozer
       - name: Install Buildozer
         run: |
           pip3 install --upgrade pip
           pip3 install --user --upgrade buildozer cython==0.29.33
 
-      # 3. Добавляем путь к pip в PATH
+      # 4. Добавляем путь к pip
       - name: Add user bin to PATH
         run: echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      # 4. Запускаем сборку с "yes"
-      # Если билд упадет, значит ему не хватает прав, но зависимости мы починили
+      # 5. ЗАПУСКАЕМ СБОРКУ (С ОГРАНИЧЕНИЕМ ПАМЯТИ JAVA)
       - name: Build APK
+        env:
+          # Эта строка спасет от вылета по памяти!
+          _JAVA_OPTIONS: "-Xmx2048m"
         run: |
           yes | buildozer android debug
 
-      # 5. Выгружаем файл
+      # 6. Выгружаем файл
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
