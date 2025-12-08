@@ -31,7 +31,7 @@ android.minapi = 21
 android.accept_sdk_license = True
 
 # Архитектуры процессора
-android.archs = armeabi-v7a, arm64-v8a
+android.archs = armeabi-v7a
 
 # Формат сборки (APK)
 android.release_artifact = apk
@@ -50,3 +50,4 @@ log_level = 2
 
 # Не предупреждать при запуске от root (ВАЖНО для Docker)
 warn_on_root = 0
+
