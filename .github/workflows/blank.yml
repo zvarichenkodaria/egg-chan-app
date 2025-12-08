@@ -5,39 +5,43 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04  # <-- ВАЖНО: 22.04 самая стабильная для этого
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Setup Environment
         run: |
+          # 1. Ставим зависимости для Ubuntu 22.04
           sudo apt-get update
-          # Добавил libtool-bin
           sudo apt-get install -y \
             python3-pip python3-setuptools python3-venv \
             git zip unzip openjdk-17-jdk autoconf libtool libtool-bin pkg-config \
-            zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo6 cmake libffi-dev libssl-dev
+            zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
 
-      - name: Install Buildozer in Venv
+      - name: Install Buildozer
         run: |
-          python3 -m venv venv
-          source venv/bin/activate
-          pip install --upgrade pip
-          pip install git+https://github.com/kivy/buildozer.git@master
-          pip install cython==0.29.33
+          # 2. Ставим Buildozer в пользовательскую папку (чтобы не ломать систему)
+          pip3 install --upgrade pip
+          pip3 install --user --upgrade git+https://github.com/kivy/buildozer.git@master
+          pip3 install --user --upgrade cython==0.29.33 virtualenv
 
       - name: Build APK
         run: |
-          source venv/bin/activate
+          # 3. Добавляем путь к установленным программам
+          export PATH=$PATH:~/.local/bin
+          
+          # Даем права на всякий случай
           sudo chmod -R 777 .
           
+          # Пароли
           export P4A_RELEASE_KEYSTORE=my-release-key.jks
           export P4A_RELEASE_KEYSTORE_PASSWD="58Dasha58."
           export P4A_RELEASE_KEYALIAS=my-key-alias
           export P4A_RELEASE_KEYALIAS_PASSWD="58Dasha58."
           
-          buildozer android release
+          # Запуск (yes нужен на случай, если он что-то спросит)
+          yes | buildozer android release
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
