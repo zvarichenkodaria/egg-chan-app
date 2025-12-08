@@ -10,23 +10,44 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Исправляем права на всякий случай
-      - name: Fix permissions
-        run: sudo chmod -R 777 .
+      - name: Setup Environment
+        run: |
+          # 1. Ставим системные зависимости
+          sudo apt-get update
+          sudo apt-get install -y \
+            python3-pip python3-setuptools python3-venv \
+            git zip unzip openjdk-17-jdk autoconf libtool pkg-config \
+            zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
 
-      - name: Build with Buildozer
-        # Используем этот экшен, он лучше работает с правами, чем сырой Docker
-        uses: ArtemSBulgakov/buildozer-action@v1
-        id: buildozer
-        with:
-          command: buildozer android release
-          buildozer_version: master
-        env:
-          # Пароли
-          P4A_RELEASE_KEYSTORE: my-release-key.jks
-          P4A_RELEASE_KEYSTORE_PASSWD: "58Dasha58."
-          P4A_RELEASE_KEYALIAS: my-key-alias
-          P4A_RELEASE_KEYALIAS_PASSWD: "58Dasha58."
+      - name: Install Buildozer in Venv
+        run: |
+          # 2. Создаем виртуальное окружение, чтобы не ломать системный питон
+          python3 -m venv venv
+          
+          # Активируем его и ставим Buildozer
+          source venv/bin/activate
+          pip install --upgrade pip
+          
+          # Ставим версию с исправленным sdkmanager
+          pip install git+https://github.com/kivy/buildozer.git@master
+          pip install cython==0.29.33
+
+      - name: Build APK
+        run: |
+          # 3. Активируем окружение перед сборкой
+          source venv/bin/activate
+          
+          # Добавляем права на всякий случай
+          sudo chmod -R 777 .
+          
+          # Экспортируем пароли
+          export P4A_RELEASE_KEYSTORE=my-release-key.jks
+          export P4A_RELEASE_KEYSTORE_PASSWD="58Dasha58."
+          export P4A_RELEASE_KEYALIAS=my-key-alias
+          export P4A_RELEASE_KEYALIAS_PASSWD="58Dasha58."
+          
+          # Запускаем сборку (лицензии примутся сами через spec файл)
+          buildozer android release
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
