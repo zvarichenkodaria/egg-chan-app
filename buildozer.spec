@@ -8,13 +8,20 @@ package.domain = ru.zvarichenko
 # Исходники
 source.dir = .
 source.main = main.py
+# ВАЖНО: Добавляем все форматы, чтобы картинки и шрифты попали в APK
+source.include_exts = py,png,jpg,jpeg,JPG,PNG,kv,atlas,ttf,otf,json,txt,xml,wav,mp3
 version = 1.0
 
 # Требования
-requirements = python3,kivy
+requirements = python3,kivy,pillow
 
-# Иконка
-icon.filename = %(source.dir)s/images/icon512.png
+# Иконка (твоя правильная, 512x512)
+icon.filename = images/icon512.png
+
+# Экран загрузки (вместо Loading...)
+# Тут используем маскота, чтобы было красиво
+presplash.filename = images/mascot.jpeg
+android.presplash_color = #121212
 
 # Ориентация и вид
 orientation = portrait
@@ -27,13 +34,13 @@ android.permissions = INTERNET,VIBRATE
 android.api = 33
 android.minapi = 21
 
-# Автоматически принимать лицензии (ВАЖНО)
+# Автоматически принимать лицензии
 android.accept_sdk_license = True
 
 # Архитектуры процессора
-android.archs = armeabi-v7a
+android.archs = arm64-v8a
 
-# Формат сборки (APK)
+# Формат сборки
 android.release_artifact = apk
 
 # Бекап
@@ -43,11 +50,14 @@ android.allow_backup = True
 p4a.branch = master
 p4a.bootstrap = sdl2
 
+# Ключи для подписи (важно для Gradle)
+p4a.release_keystore = my-release-key.keystore
+p4a.release_keyalias = my-key-alias
+
 [buildozer]
 
-# Уровень логов (2 = debug)
+# Уровень логов
 log_level = 2
 
-# Не предупреждать при запуске от root (ВАЖНО для Docker)
+# Не предупреждать при запуске от root
 warn_on_root = 0
-
