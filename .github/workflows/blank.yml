@@ -14,11 +14,11 @@ jobs:
           command: buildozer android release
           buildozer_version: stable
         env:
-          USER: buildozer  # <--- ВОТ ЭТА СТРОКА ИСПРАВЛЯЕТ ОШИБКУ
+          USER: root
           P4A_RELEASE_KEYSTORE: my-release-key.jks
-          P4A_RELEASE_KEYSTORE_PASSWD: "58Dasha58."
+          P4A_RELEASE_KEYSTORE_PASSWD: "ВАШ_ПАРОЛЬ"
           P4A_RELEASE_KEYALIAS: my-key-alias
-          P4A_RELEASE_KEYALIAS_PASSWD: "58Dasha58."
+          P4A_RELEASE_KEYALIAS_PASSWD: "ВАШ_ПАРОЛЬ"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
