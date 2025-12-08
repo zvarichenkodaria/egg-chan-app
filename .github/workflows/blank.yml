@@ -11,55 +11,59 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 1. Ставим Java 17 (она нужна для новых SDK Tools)
+      # 1. Java 17 (стандарт)
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      # 2. Ставим Android SDK отдельно (чтобы не мучить Buildozer)
+      # 2. Ставим Android SDK
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      # 3. Подтверждаем лицензии (самое важное!)
-      - name: Accept Android Licenses
-        run: |
-          yes | sdkmanager --licenses
+      # 3. Принимаем лицензии
+      - name: Accept Licenses
+        run: yes | sdkmanager --licenses
 
-      # 4. Ставим Python
+      # 4. Ставим NDK (Buildozer нужен NDK определенной версии, пусть скачает рекомендованную)
+      # Мы поставим NDK 25.2.9519653 (LTS), который часто нужен
+      - name: Install NDK
+        run: sdkmanager "ndk;25.2.9519653"
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      # 5. Ставим зависимости Linux
-      - name: Install System Dependencies
+      - name: Install Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
             zip unzip autoconf libtool libtool-bin pkg-config \
             libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
 
-      # 6. Ставим Buildozer
       - name: Install Buildozer
         run: |
           pip install --upgrade pip
           pip install git+https://github.com/kivy/buildozer.git@master
           pip install cython==0.29.33 virtualenv
 
-      # 7. Запускаем сборку
       - name: Build APK
         env:
-          # Пароли
+          # Ключи
           P4A_RELEASE_KEYSTORE: my-release-key.jks
           P4A_RELEASE_KEYSTORE_PASSWD: "58Dasha58."
           P4A_RELEASE_KEYALIAS: my-key-alias
           P4A_RELEASE_KEYALIAS_PASSWD: "58Dasha58."
-          # Говорим Buildozer использовать наш SDK (он уже установлен в $ANDROID_HOME)
-          # ВАЖНО: Мы не задаем путь вручную, buildozer сам найдет его, если он есть в PATH
+          # ВАЖНО: Указываем Buildozer-у не качать SDK/NDK, а брать системные!
+          # В GitHub Actions $ANDROID_HOME уже установлен
+          # Нам нужно найти путь к NDK
         run: |
-          # Запускаем сборку (теперь yes не нужен, лицензии уже приняты)
+          # Находим путь к установленному NDK
+          export ANDROID_NDK_HOME=$ANDROID_HOME/ndk/25.2.9519653
+          
+          # Запускаем сборку
           buildozer android release
 
       - name: Upload APK
