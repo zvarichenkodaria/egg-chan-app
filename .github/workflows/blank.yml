@@ -12,41 +12,36 @@ jobs:
 
       - name: Setup Environment
         run: |
-          # 1. Ставим системные зависимости
           sudo apt-get update
+          # ВАЖНО: Заменили libtinfo5 на libtinfo6, так как в Ubuntu 24.04 старой версии нет
           sudo apt-get install -y \
             python3-pip python3-setuptools python3-venv \
             git zip unzip openjdk-17-jdk autoconf libtool pkg-config \
-            zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
+            zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo6 cmake libffi-dev libssl-dev
 
       - name: Install Buildozer in Venv
         run: |
-          # 2. Создаем виртуальное окружение, чтобы не ломать системный питон
           python3 -m venv venv
-          
-          # Активируем его и ставим Buildozer
           source venv/bin/activate
           pip install --upgrade pip
-          
-          # Ставим версию с исправленным sdkmanager
+          # Ставим версию с багфиксами
           pip install git+https://github.com/kivy/buildozer.git@master
           pip install cython==0.29.33
 
       - name: Build APK
         run: |
-          # 3. Активируем окружение перед сборкой
           source venv/bin/activate
           
-          # Добавляем права на всякий случай
+          # Права
           sudo chmod -R 777 .
           
-          # Экспортируем пароли
+          # Пароли
           export P4A_RELEASE_KEYSTORE=my-release-key.jks
           export P4A_RELEASE_KEYSTORE_PASSWD="58Dasha58."
           export P4A_RELEASE_KEYALIAS=my-key-alias
           export P4A_RELEASE_KEYALIAS_PASSWD="58Dasha58."
           
-          # Запускаем сборку (лицензии примутся сами через spec файл)
+          # Сборка
           buildozer android release
 
       - name: Upload APK
