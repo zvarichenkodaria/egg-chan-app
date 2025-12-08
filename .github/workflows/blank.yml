@@ -11,11 +11,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # ВЕРНУЛИ Java 11 (она стабильнее для SDK 33)
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '11'
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -35,8 +36,6 @@ jobs:
           pip install git+https://github.com/kivy/buildozer.git@master
           pip install cython==0.29.33 virtualenv
 
-      # ШАГ CLEANUP УДАЛЕН!
-
       - name: Build APK
         env:
           P4A_RELEASE_KEYSTORE: my-release-key.jks
@@ -44,7 +43,8 @@ jobs:
           P4A_RELEASE_KEYALIAS: my-key-alias
           P4A_RELEASE_KEYALIAS_PASSWD: "58Dasha58."
         run: |
-          yes | buildozer android release
+          # Убрали 'yes |', теперь команда чистая
+          buildozer android release
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
