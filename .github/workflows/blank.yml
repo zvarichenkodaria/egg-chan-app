@@ -5,7 +5,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Build with Buildozer
         uses: ArtemSBulgakov/buildozer-action@v1
@@ -14,7 +14,7 @@ jobs:
           command: buildozer android release
           buildozer_version: stable
         env:
-          # Укажите здесь пароль, который вы вводили при создании ключа
+          USER: buildozer  # <--- ВОТ ЭТА СТРОКА ИСПРАВЛЯЕТ ОШИБКУ
           P4A_RELEASE_KEYSTORE: my-release-key.jks
           P4A_RELEASE_KEYSTORE_PASSWD: "ВАШ_ПАРОЛЬ"
           P4A_RELEASE_KEYALIAS: my-key-alias
