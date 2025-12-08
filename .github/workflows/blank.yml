@@ -11,25 +11,22 @@ jobs:
 
       - name: Setup Environment
         run: |
-          # 1. Обновляем и ставим зависимости
           sudo apt-get update
           sudo apt-get install -y python3-pip python3-setuptools git zip unzip openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
           
-          # 2. Обновляем pip и ставим Buildozer
           pip3 install --upgrade pip
-          pip3 install --user --upgrade buildozer cython==0.29.33 virtualenv
+          # СТАВИМ BUILDOZER ПРЯМО С GITHUB (там исправлен баг с sdkmanager)
+          pip3 install --user --upgrade git+https://github.com/kivy/buildozer.git@master
+          pip3 install --user --upgrade cython==0.29.33 virtualenv
 
       - name: Fix permissions
         run: |
           sudo chown -R $USER:$USER .
 
-      # !!! НОВЫЙ БЛОК: Принимаем лицензии !!!
       - name: Accept Android Licenses
         run: |
-          # Создаем структуру папок, чтобы buildozer знал, куда качать SDK
+          # На всякий случай создаем лицензии вручную
           mkdir -p ~/.buildozer/android/platform/android-sdk/licenses
-          
-          # Заранее прописываем хеши лицензий (это стандартный трюк)
           echo "8933bad161af4178b1185d1a37fbf41ea5269c55" > ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
           echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
           echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" >> ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
@@ -38,14 +35,12 @@ jobs:
         run: |
           export PATH=$PATH:~/.local/bin
           
-          # Пароли
           export P4A_RELEASE_KEYSTORE=my-release-key.jks
           export P4A_RELEASE_KEYSTORE_PASSWD="58Dasha58."
           export P4A_RELEASE_KEYALIAS=my-key-alias
           export P4A_RELEASE_KEYALIAS_PASSWD="58Dasha58."
           
-          # Перед запуском говорим buildozer'у автоматически соглашаться с лицензиями
-          # (хотя мы их уже подсунули выше, это для надежности)
+          # Запускаем с yes, чтобы точно проскочить все вопросы
           yes | buildozer android release
         
       - name: Upload APK
