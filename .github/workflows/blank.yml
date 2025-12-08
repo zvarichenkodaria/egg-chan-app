@@ -3,21 +3,22 @@ on: [push]
 
 jobs:
   build:
-    runs-on: ubuntu-20.04  # Используем старую Ubuntu, где нет проблем с externally-managed
+    runs-on: ubuntu-22.04  # <-- БЕРЕМ РАБОЧУЮ ВЕРСИЮ
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 1. Подготовка окружения (Python + Java)
+      # 1. Подготовка (с флагом --break-system-packages, чтобы не было ошибки)
       - name: Setup Environment
         run: |
           sudo apt-get update
           sudo apt-get install -y python3-pip python3-setuptools git zip unzip openjdk-11-jdk autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
-          pip3 install --upgrade pip
-          pip3 install --user --upgrade buildozer cython==0.29.33 virtualenv
+          
+          # Вот тут магия: разрешаем ломать пакеты, чтобы Buildozer встал
+          pip3 install --user --upgrade buildozer cython==0.29.33 virtualenv --break-system-packages
 
-      # 2. Восстановление прав (на всякий случай)
+      # 2. Восстановление прав
       - name: Fix permissions
         run: |
           sudo chown -R $USER:$USER .
@@ -26,13 +27,13 @@ jobs:
       - name: Build APK
         run: |
           export PATH=$PATH:~/.local/bin
-          # Передаем пароли через переменные окружения
+          # Пароли
           export P4A_RELEASE_KEYSTORE=my-release-key.jks
           export P4A_RELEASE_KEYSTORE_PASSWD="58Dasha58."
           export P4A_RELEASE_KEYALIAS=my-key-alias
           export P4A_RELEASE_KEYALIAS_PASSWD="58Dasha58."
           
-          # Запускаем сборку
+          # Запуск
           buildozer android release
         
       # 4. Загрузка результата
