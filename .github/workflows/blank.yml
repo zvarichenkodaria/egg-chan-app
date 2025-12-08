@@ -11,22 +11,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 1. Ставим Java 17
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      # 2. Ставим Android SDK (этот шаг установит переменную ANDROID_HOME)
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      # 3. Ставим NDK 25.2.9519653 (это LTS версия, надежная)
+      # NDK 25.2.9519653 (LTS)
       - name: Install NDK
         run: sdkmanager "ndk;25.2.9519653"
 
-      # 4. Принимаем лицензии
       - name: Accept Licenses
         run: yes | sdkmanager --licenses
 
@@ -48,22 +45,22 @@ jobs:
           pip install git+https://github.com/kivy/buildozer.git@master
           pip install cython==0.29.33 virtualenv
 
-      # 5. САМЫЙ ВАЖНЫЙ ШАГ: Прописываем пути в spec-файл
-      - name: Patch buildozer.spec
+      # ИСПРАВЛЕННЫЙ ШАГ: Просто дописываем пути в конец файла buildozer.spec
+      # Это безопаснее, чем sed, который может не найти шаблон
+      - name: Force SDK/NDK paths in spec
         run: |
-          # Находим путь к NDK
+          # Получаем путь к NDK
           export NDK_PATH=$ANDROID_HOME/ndk/25.2.9519653
           
-          # Раскомментируем и вписываем пути в файл
-          # Заменяем #android.sdk_path = ... на реальный путь
-          sed -i "s|#android.sdk_path =.*|android.sdk_path = $ANDROID_HOME|" buildozer.spec
+          # Просто дописываем в конец файла. ConfigParser прочитает это.
+          # Если параметры уже были выше, эти их перезапишут.
+          echo "" >> buildozer.spec
+          echo "# FORCED PATHS BY GITHUB ACTIONS" >> buildozer.spec
+          echo "android.sdk_path = $ANDROID_HOME" >> buildozer.spec
+          echo "android.ndk_path = $NDK_PATH" >> buildozer.spec
           
-          # Заменяем #android.ndk_path = ... на реальный путь
-          sed -i "s|#android.ndk_path =.*|android.ndk_path = $NDK_PATH|" buildozer.spec
-          
-          # Проверяем, что получилось (выведем в лог)
-          grep "android.sdk_path" buildozer.spec
-          grep "android.ndk_path" buildozer.spec
+          # Для проверки выведем последние 5 строк файла
+          tail -n 5 buildozer.spec
 
       - name: Build APK
         env:
@@ -72,7 +69,6 @@ jobs:
           P4A_RELEASE_KEYALIAS: my-key-alias
           P4A_RELEASE_KEYALIAS_PASSWD: "58Dasha58."
         run: |
-          # Теперь buildozer ТОЧНО знает, где искать SDK, и не будет качать его сам
           buildozer android release
 
       - name: Upload APK
