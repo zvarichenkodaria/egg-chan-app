@@ -5,43 +5,32 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04  # <-- ВАЖНО: 22.04 самая стабильная для этого
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Environment
+      - name: Fix permissions PRE-flight
         run: |
-          # 1. Ставим зависимости для Ubuntu 22.04
-          sudo apt-get update
-          sudo apt-get install -y \
-            python3-pip python3-setuptools python3-venv \
-            git zip unzip openjdk-17-jdk autoconf libtool libtool-bin pkg-config \
-            zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
-
-      - name: Install Buildozer
-        run: |
-          # 2. Ставим Buildozer в пользовательскую папку (чтобы не ломать систему)
-          pip3 install --upgrade pip
-          pip3 install --user --upgrade git+https://github.com/kivy/buildozer.git@master
-          pip3 install --user --upgrade cython==0.29.33 virtualenv
-
-      - name: Build APK
-        run: |
-          # 3. Добавляем путь к установленным программам
-          export PATH=$PATH:~/.local/bin
-          
-          # Даем права на всякий случай
+          # 1. Создаем папку buildozer заранее
+          mkdir -p .buildozer
+          # 2. Даем права всем на всё
           sudo chmod -R 777 .
-          
+          # 3. Делаем владельцем текущего пользователя (чтобы docker мог писать)
+          sudo chown -R $USER:$USER .
+
+      - name: Build with Buildozer Action
+        uses: ArtemSBulgakov/buildozer-action@v1
+        id: buildozer
+        with:
+          command: buildozer android release
+          buildozer_version: master
+        env:
           # Пароли
-          export P4A_RELEASE_KEYSTORE=my-release-key.jks
-          export P4A_RELEASE_KEYSTORE_PASSWD="58Dasha58."
-          export P4A_RELEASE_KEYALIAS=my-key-alias
-          export P4A_RELEASE_KEYALIAS_PASSWD="58Dasha58."
-          
-          # Запуск (yes нужен на случай, если он что-то спросит)
-          yes | buildozer android release
+          P4A_RELEASE_KEYSTORE: my-release-key.jks
+          P4A_RELEASE_KEYSTORE_PASSWD: "58Dasha58."
+          P4A_RELEASE_KEYALIAS: my-key-alias
+          P4A_RELEASE_KEYALIAS_PASSWD: "58Dasha58."
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
