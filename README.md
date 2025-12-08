@@ -1,1 +1,1 @@
-# egg-chan-app
+egg-chan-app
