@@ -1,5 +1,7 @@
 name: Build Signed APK
-on: [push]
+on:
+  push:
+  workflow_dispatch:
 
 jobs:
   build:
@@ -9,17 +11,17 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build with Buildozer Docker
-        # Мы используем официальный контейнер, где всё уже настроено
         uses: docker://kivy/buildozer:latest
         with:
-          args: buildozer android release
+          # ВАЖНО: Убрали слово "buildozer", оставили только аргументы
+          args: android release
         env:
-          # Пароли для подписи
+          # Пароли
           P4A_RELEASE_KEYSTORE: my-release-key.jks
           P4A_RELEASE_KEYSTORE_PASSWD: "58Dasha58."
           P4A_RELEASE_KEYALIAS: my-key-alias
           P4A_RELEASE_KEYALIAS_PASSWD: "58Dasha58."
-          # Права доступа (чтобы не было ошибки пользователя)
+          # Права
           USER: root
 
       - name: Upload APK
