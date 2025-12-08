@@ -1,10 +1,9 @@
 from kivy.config import Config
+# Настройки окна для десктопа (на Android игнорируются, но полезно для тестов)
 Config.set('graphics', 'width', '360')
 Config.set('graphics', 'height', '700')
 Config.set('graphics', 'resizable', '0')
-# Чтобы иконка окна применилась сразу при запуске (для десктопа)
 Config.set('kivy', 'window_icon', 'images/маскот.jpeg')
-
 
 import copy
 import random
@@ -13,6 +12,7 @@ import math
 from datetime import datetime
 from kivy.app import App
 from kivy.core.text import LabelBase
+from kivy.metrics import dp, sp  # <--- САМОЕ ВАЖНОЕ: импортируем адаптивные единицы
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.anchorlayout import AnchorLayout
@@ -35,13 +35,11 @@ from kivy.uix.behaviors import ButtonBehavior
 from kivy.storage.jsonstore import JsonStore
 from kivy.uix.image import Image
 
-
 try:
     from plyer import notification, vibrator
 except ImportError:
     notification = None
     vibrator = None
-
 
 # === ЦВЕТА ===
 BG_COLOR = '#121212'
@@ -54,9 +52,7 @@ DISABLED_COLOR = '#424242'
 SEPARATOR_COLOR = '#333333'
 BLACK_BG = '#000000'
 
-
 Window.clearcolor = get_color_from_hex(BG_COLOR)
-
 
 # === ДАННЫЕ ===
 DEFAULT_DATA = {
@@ -71,7 +67,6 @@ DEFAULT_DATA = {
 }
 current_times = copy.deepcopy(DEFAULT_DATA)
 
-
 EGG_PERSONAS = [
     {"name": "Сырое яйцо-интроверт", "desc": "Ты еще только прогреваешься.\nНе спеши, главное — не треснуть.", "img": "images/интроверт.png"},
     {"name": "Всмятку яйцо-мечтатель", "desc": "Снаружи собрана,\nвнутри — лава идей.\nВажно не перевариться.", "img": "images/мечтатель.jpeg"},
@@ -85,16 +80,13 @@ EGG_PERSONAS = [
     {"name": "Цыпленок", "desc": "Кажется, ты перележал.\nПора вылупляться!", "img": "images/цыпленок.jpeg"}
 ]
 
-
 store = JsonStore('egg_data.json')
-
 
 # === ВИДЖЕТЫ ===
 
-
 class RoundedButton(ButtonBehavior, Label):
     bg_color = ListProperty(get_color_from_hex(ACCENT_COLOR))
-    radius = ListProperty([15])
+    radius = ListProperty([dp(15)]) # Адаптивный радиус
     glare_alpha = NumericProperty(0) 
     
     def __init__(self, **kwargs):
@@ -102,7 +94,6 @@ class RoundedButton(ButtonBehavior, Label):
         self.bold = True
         self.bind(pos=self.update_canvas, size=self.update_canvas, bg_color=self.update_canvas, glare_alpha=self.update_canvas)
         self.update_canvas()
-
 
     def update_canvas(self, *args):
         self.canvas.before.clear()
@@ -114,40 +105,34 @@ class RoundedButton(ButtonBehavior, Label):
             Color(1, 1, 1, self.glare_alpha)
             RoundedRectangle(pos=self.pos, size=self.size, radius=self.radius)
 
-
     def on_press(self):
         Animation(glare_alpha=0.3, duration=0.1).start(self)
     def on_release(self):
         Animation(glare_alpha=0, duration=0.2).start(self)
-
 
 class SettingsRow(ButtonBehavior, BoxLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'horizontal'
         self.size_hint_y = None   
-        self.height = 60          
-        self.padding = [15, 0]    
-        self.spacing = 10
-
+        self.height = dp(60)          # dp
+        self.padding = [dp(15), 0]    # dp
+        self.spacing = dp(10)         # dp
 
 class YellowSwitch(ButtonBehavior, Widget):
     active = BooleanProperty(False)
     anim_progress = NumericProperty(0)
 
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.size_hint = (None, None)
-        self.size = (50, 28)
+        self.size = (dp(50), dp(28)) # dp
         self.bind(pos=self.update_canvas, size=self.update_canvas, anim_progress=self.update_canvas)
         self.update_canvas()
-
 
     def on_active(self, instance, value):
         target = 1.0 if value else 0.0
         Animation(anim_progress=target, duration=0.2, t='out_quad').start(self)
-
 
     def update_canvas(self, *args):
         self.canvas.clear()
@@ -158,9 +143,9 @@ class YellowSwitch(ButtonBehavior, Widget):
         b = disabled_col[2] + (active_col[2] - disabled_col[2]) * self.anim_progress
         with self.canvas:
             Color(r, g, b, 1 if self.anim_progress == 0 else 0.5) 
-            RoundedRectangle(pos=self.pos, size=self.size, radius=[14])
+            RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(14)]) # dp
             Color(1, 1, 1, 1)
-            padding = 2
+            padding = dp(2) # dp
             knob_size = self.height - padding * 2
             start_x = self.x + padding
             end_x = self.x + self.width - knob_size - padding
@@ -168,43 +153,34 @@ class YellowSwitch(ButtonBehavior, Widget):
             Ellipse(pos=(current_x, self.y + padding), size=(knob_size, knob_size))
     def on_press(self): self.active = not self.active
 
-
-# === НОВАЯ КНОПКА СБРОСА (Круглая маска) ===
 class ResetButton(ButtonBehavior, Widget):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.size_hint = (None, 1)
-        self.width = 50
-        # ВАЖНО: тут имя файла .png, как ты просила
+        self.width = dp(50) # dp
         self.source = 'images/PhArrowCounterClockwiseBold.png'
         self._img = Image(source=self.source, keep_ratio=True, allow_stretch=True)
-        self._img.reload() # Принудительно перезагружаем
+        self._img.reload()
         
         self.bind(pos=self.update_canvas, size=self.update_canvas)
 
     def update_canvas(self, *args):
         self.canvas.clear()
         cx, cy = self.center_x, self.center_y
-        d = 36  # диаметр круга
+        d = dp(36)  # dp
 
         with self.canvas:
-            # 1. Создаем маску (трафарет) в форме круга
             StencilPush()
             Ellipse(pos=(cx - d/2, cy - d/2), size=(d, d))
             StencilUse()
-            
-            # 2. Рисуем саму картинку
             Color(1, 1, 1, 1)
             if self._img.texture:
                 Rectangle(texture=self._img.texture, 
                           pos=(cx - d/2, cy - d/2), 
                           size=(d, d))
-            
-            # 3. Выключаем маску
             StencilUnUse()
             Ellipse(pos=(cx - d/2, cy - d/2), size=(d, d))
             StencilPop()
-
 
 class BurgerButton(Button):
     def __init__(self, **kwargs):
@@ -213,42 +189,39 @@ class BurgerButton(Button):
         self.background_normal = ''
         with self.canvas.after:
             Color(*get_color_from_hex(ACCENT_COLOR))
-            self.lines = [Line(width=2), Line(width=2), Line(width=2)]
+            self.lines = [Line(width=dp(2)), Line(width=dp(2)), Line(width=dp(2))] # dp
         self.bind(pos=self.update_canvas, size=self.update_canvas)
     def update_canvas(self, *args):
         cx, cy = self.center_x, self.center_y
-        w = 22 
-        self.lines[0].points = [cx - w/2, cy + 6, cx + w/2, cy + 6]
+        w = dp(22) # dp
+        offset = dp(6) # dp
+        self.lines[0].points = [cx - w/2, cy + offset, cx + w/2, cy + offset]
         self.lines[1].points = [cx - w/2, cy, cx + w/2, cy]
-        self.lines[2].points = [cx - w/2, cy - 6, cx + w/2, cy - 6]
+        self.lines[2].points = [cx - w/2, cy - offset, cx + w/2, cy - offset]
 
-
-# ИСПРАВЛЕННЫЙ КЛАСС АВАТАРА
 class CircularAvatar(ButtonBehavior, Widget):
     source = StringProperty('')
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.size_hint = (None, None)
-        self.size = (40, 40) 
+        self.size = (dp(40), dp(40)) # dp
         self._img = Image(size_hint=(1,1), pos_hint={'center_x':0.5, 'center_y':0.5})
         
-        # Обновляем внутреннюю картинку при смене source
         self.bind(source=self._update_src)
-        # Перерисовываем при изменении позиции, размера или картинки
         self.bind(pos=self.update_canvas, size=self.update_canvas)
     
     def _update_src(self, instance, value):
         self._img.source = value
-        self._img.reload() # Принудительно перегружаем текстуру
-        self.update_canvas() # Принудительно перерисовываем
+        self._img.reload()
+        self.update_canvas()
 
     def update_canvas(self, *args):
         self.canvas.clear()
         if not self.source:
             with self.canvas:
                 Color(*get_color_from_hex(ACCENT_COLOR))
-                Line(circle=(self.center_x, self.center_y, self.width/2), width=1.5)
+                Line(circle=(self.center_x, self.center_y, self.width/2), width=dp(1.5)) # dp
             return
         with self.canvas:
             StencilPush()
@@ -261,8 +234,7 @@ class CircularAvatar(ButtonBehavior, Widget):
             Ellipse(pos=self.pos, size=self.size)
             StencilPop()
             Color(*get_color_from_hex(ACCENT_COLOR))
-            Line(circle=(self.center_x, self.center_y, self.width/2), width=1.5)
-
+            Line(circle=(self.center_x, self.center_y, self.width/2), width=dp(1.5)) # dp
 
 class Firework(Widget):
     def __init__(self, **kwargs):
@@ -272,18 +244,20 @@ class Firework(Widget):
             for _ in range(30):
                 color = random.choice([ACCENT_COLOR, '#FF5722', '#03A9F4', '#8BC34A', '#E91E63'])
                 Color(*get_color_from_hex(color))
-                size = random.randint(6, 14)
+                size = random.randint(int(dp(6)), int(dp(14))) # dp (converted to int)
                 p = Ellipse(pos=self.center, size=(size, size))
                 self.particles.append(p)
         self.start_explosion()
     def start_explosion(self):
         for p in self.particles:
-            anim = Animation(pos=(self.center_x + random.randint(-180, 180), self.center_y + random.randint(-180, 180)), size=(0, 0), duration=1.5, t='out_expo')
+            anim = Animation(
+                pos=(self.center_x + random.randint(int(dp(-180)), int(dp(180))), 
+                     self.center_y + random.randint(int(dp(-180)), int(dp(180)))), 
+                size=(0, 0), duration=1.5, t='out_expo')
             anim.start(p)
         Clock.schedule_once(self.remove_self, 1.6)
     def remove_self(self, dt):
         if self.parent: self.parent.remove_widget(self)
-
 
 class SmoothModeButton(ToggleButton):
     bg_rgba = ListProperty(get_color_from_hex(CARD_BG)) 
@@ -313,9 +287,9 @@ class SmoothModeButton(ToggleButton):
         self.canvas.before.clear()
         with self.canvas.before:
             Color(*self.bg_rgba)
-            RoundedRectangle(pos=self.pos, size=self.size, radius=[10])
+            RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(10)]) # dp
             Color(1, 1, 1, self.glare_alpha)
-            RoundedRectangle(pos=self.pos, size=self.size, radius=[10])
+            RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(10)]) # dp
     def on_press(self):
         Animation(glare_alpha=0.3, duration=0.1).start(self)
     def on_release(self):
@@ -323,26 +297,26 @@ class SmoothModeButton(ToggleButton):
     def on_size(self, *args): self.update_canvas()
     def on_pos(self, *args): self.update_canvas()
 
-
 # === ЭКРАН НАСТРОЕК ===
 class TimeSettingsScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         root = BoxLayout(orientation='vertical')
-        header = BoxLayout(size_hint=(1, None), height=60, padding=[10, 0], spacing=10)
+        header = BoxLayout(size_hint=(1, None), height=dp(60), padding=[dp(10), 0], spacing=dp(10)) # dp
         with header.canvas.before:
             Color(*get_color_from_hex(BG_COLOR))
             self.header_bg = Rectangle(pos=header.pos, size=header.size)
         header.bind(pos=lambda i,v: setattr(self.header_bg, 'pos', i.pos),
                     size=lambda i,v: setattr(self.header_bg, 'size', i.size))
-        btn_back = Button(text="<", font_size='24sp', size_hint=(None, 1), width=50, 
+        
+        btn_back = Button(text="<", font_size=sp(24), size_hint=(None, 1), width=dp(50), # sp, dp
                           background_color=(0,0,0,0), color=get_color_from_hex(TEXT_COLOR))
         btn_back.bind(on_press=self.go_back)
-        title = Label(text="Время приготовления", font_size='20sp', bold=True, 
+        
+        title = Label(text="Время приготовления", font_size=sp(20), bold=True, # sp
                       color=get_color_from_hex(TEXT_COLOR), halign='left', valign='middle')
         title.bind(size=title.setter('text_size'))
         
-        # === ИСПОЛЬЗУЕМ НОВЫЙ КЛАСС ===
         btn_reset = ResetButton()
         btn_reset.bind(on_press=self.confirm_reset)
         
@@ -350,7 +324,7 @@ class TimeSettingsScreen(Screen):
         header.add_widget(title)
         header.add_widget(btn_reset)
         self.scroll = ScrollView(size_hint=(1, 1))
-        self.cards_container = GridLayout(cols=1, spacing=20, size_hint_y=None, padding=[15, 10, 15, 20])
+        self.cards_container = GridLayout(cols=1, spacing=dp(20), size_hint_y=None, padding=[dp(15), dp(10), dp(15), dp(20)]) # dp
         self.cards_container.bind(minimum_height=self.cards_container.setter('height'))
         self.scroll.add_widget(self.cards_container)
         root.add_widget(header)
@@ -364,23 +338,23 @@ class TimeSettingsScreen(Screen):
                  ('chicken', 'C0'), ('chicken', 'CB'), ('quail', 'default')]
         for species, size_key in order: self._add_card(species, size_key)
     def _add_card(self, species, size_key):
-        total_h = 235
+        total_h = dp(235) # dp
         card = GridLayout(cols=1, size_hint_y=None, height=total_h, spacing=0)
         with card.canvas.before:
             Color(*get_color_from_hex(CARD_BG))
-            bg_rect = RoundedRectangle(pos=card.pos, size=card.size, radius=[12])
+            bg_rect = RoundedRectangle(pos=card.pos, size=card.size, radius=[dp(12)]) # dp
         def update_bg(instance, value, r=bg_rect):
             r.pos = instance.pos
             r.size = instance.size
         card.bind(pos=update_bg, size=update_bg)
         display_name = f"{size_key}-размер" if species == 'chicken' else "Перепелиное"
-        header_box = BoxLayout(size_hint_y=None, height=50, padding=[15, 0])
+        header_box = BoxLayout(size_hint_y=None, height=dp(50), padding=[dp(15), 0]) # dp
         lbl = Label(text=display_name, color=get_color_from_hex(ACCENT_COLOR), 
-                    bold=True, font_size='16sp', halign='left', valign='middle')
+                    bold=True, font_size=sp(16), halign='left', valign='middle') # sp
         lbl.bind(size=lbl.setter('text_size'))
         header_box.add_widget(lbl)
         card.add_widget(header_box)
-        sep = Widget(size_hint_y=None, height=1)
+        sep = Widget(size_hint_y=None, height=dp(1)) # dp
         with sep.canvas:
             Color(*get_color_from_hex(SEPARATOR_COLOR))
             Rectangle(pos=sep.pos, size=sep.size)
@@ -396,23 +370,23 @@ class TimeSettingsScreen(Screen):
         for i, mode_name in enumerate(modes):
             row = SettingsRow()
             row.bind(on_press=lambda x, sp=species, sk=size_key, idx=i: self.open_edit_popup(sp, sk, idx))
-            text_box = BoxLayout(orientation='vertical', spacing=0, padding=[0, 12])
-            l1 = Label(text=mode_name, font_size='16sp', color=get_color_from_hex(TEXT_COLOR), 
+            text_box = BoxLayout(orientation='vertical', spacing=0, padding=[0, dp(12)]) # dp
+            l1 = Label(text=mode_name, font_size=sp(16), color=get_color_from_hex(TEXT_COLOR), # sp
                        halign='left', valign='middle', size_hint=(1, 0.6))
             l1.bind(size=l1.setter('text_size'))
             m, s = divmod(times[i], 60)
-            l2 = Label(text=f"{m:02}:{s:02}", font_size='13sp', color=get_color_from_hex(SUBTEXT_COLOR),
+            l2 = Label(text=f"{m:02}:{s:02}", font_size=sp(13), color=get_color_from_hex(SUBTEXT_COLOR), # sp
                        halign='left', valign='middle', size_hint=(1, 0.4))
             l2.bind(size=l2.setter('text_size'))
             text_box.add_widget(l1)
             text_box.add_widget(l2)
-            arrow = Label(text=">", font_size='18sp', color=get_color_from_hex(SUBTEXT_COLOR),
-                          size_hint=(None, 1), width=30)
+            arrow = Label(text=">", font_size=sp(18), color=get_color_from_hex(SUBTEXT_COLOR), # sp
+                          size_hint=(None, 1), width=dp(30)) # dp
             row.add_widget(text_box)
             row.add_widget(arrow)
             card.add_widget(row)
             if i < len(modes) - 1:
-                s_line = Widget(size_hint_y=None, height=1)
+                s_line = Widget(size_hint_y=None, height=dp(1)) # dp
                 with s_line.canvas:
                     Color(*get_color_from_hex(SEPARATOR_COLOR))
                     Rectangle(pos=s_line.pos, size=s_line.size)
@@ -424,11 +398,12 @@ class TimeSettingsScreen(Screen):
                 s_line.bind(pos=upd_s, size=upd_s)
                 card.add_widget(s_line)
         self.cards_container.add_widget(card)
+        
     def open_edit_popup(self, species, size_key, mode_idx):
         current_sec = current_times[species][size_key][mode_idx]
-        content = BoxLayout(orientation='vertical', padding=20, spacing=20)
-        controls = BoxLayout(spacing=20, size_hint=(1, None), height=100)
-        lbl_val = Label(text=f"{current_sec}", font_size='40sp', bold=True, color=get_color_from_hex(ACCENT_COLOR))
+        content = BoxLayout(orientation='vertical', padding=dp(20), spacing=dp(20)) # dp
+        controls = BoxLayout(spacing=dp(20), size_hint=(1, None), height=dp(100)) # dp
+        lbl_val = Label(text=f"{current_sec}", font_size=sp(40), bold=True, color=get_color_from_hex(ACCENT_COLOR)) # sp
         def change_time(delta):
             new_val = int(lbl_val.text) + delta
             if new_val < 10: new_val = 10
@@ -438,7 +413,7 @@ class TimeSettingsScreen(Screen):
         controls.add_widget(btn_minus)
         controls.add_widget(lbl_val)
         controls.add_widget(btn_plus)
-        btn_save = RoundedButton(text="СОХРАНИТЬ", size_hint=(1, None), height=50, 
+        btn_save = RoundedButton(text="СОХРАНИТЬ", size_hint=(1, None), height=dp(50), # dp
                           bg_color=get_color_from_hex(ACCENT_COLOR), color=(0,0,0,1))
         popup = Popup(title='Изменить время (сек)', content=content, size_hint=(0.8, 0.4), 
                       separator_color=get_color_from_hex(ACCENT_COLOR))
@@ -453,10 +428,11 @@ class TimeSettingsScreen(Screen):
         content.add_widget(controls)
         content.add_widget(btn_save)
         popup.open()
+        
     def confirm_reset(self, instance):
-        content = BoxLayout(orientation='vertical', padding=20, spacing=20)
-        lbl = Label(text="Сбросить все настройки?", halign='center')
-        btns = BoxLayout(spacing=20, size_hint=(1, None), height=50)
+        content = BoxLayout(orientation='vertical', padding=dp(20), spacing=dp(20)) # dp
+        lbl = Label(text="Сбросить все настройки?", halign='center', font_size=sp(16)) # sp
+        btns = BoxLayout(spacing=dp(20), size_hint=(1, None), height=dp(50)) # dp
         btn_no = Button(text="ОТМЕНА", background_color=(0,0,0,0), color=get_color_from_hex(ACCENT_COLOR))
         btn_yes = Button(text="СБРОСИТЬ", background_color=(0,0,0,0), color=get_color_from_hex(ACCENT_COLOR), bold=True)
         popup = Popup(title='', content=content, size_hint=(0.85, 0.3), separator_height=0, 
@@ -476,19 +452,18 @@ class TimeSettingsScreen(Screen):
         content.add_widget(lbl)
         content.add_widget(btns)
         popup.open()
+        
     def go_back(self, instance):
         self.manager.transition = SlideTransition(direction="right")
         self.manager.current = 'main'
 
-
 # === ОСНОВНОЙ ЭКРАН ===
 
-
 class SideMenu(FloatLayout):
-    x_pos = NumericProperty(-300)
+    x_pos = NumericProperty(-dp(300)) # dp
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.menu_width = 280
+        self.menu_width = dp(280) # dp
         self.bg = Widget(pos_hint={'x':0, 'y':0}, size_hint=(None, None), size=(0,0))
         with self.bg.canvas:
             self.bg_color = Color(0, 0, 0, 0)
@@ -496,31 +471,31 @@ class SideMenu(FloatLayout):
         self.bg.bind(pos=self.update_bg_rect, size=self.update_bg_rect)
         self.add_widget(self.bg)
         self.panel = BoxLayout(orientation='vertical', size_hint=(None, 1), width=self.menu_width, 
-                              x=self.x_pos, padding=20, spacing=10)
+                              x=self.x_pos, padding=dp(20), spacing=dp(10)) # dp
         with self.panel.canvas.before:
             Color(*get_color_from_hex(CARD_BG))
             self.rect = Rectangle(pos=self.panel.pos, size=self.panel.size)
         self.panel.bind(pos=lambda inst, val: setattr(self.rect, 'pos', inst.pos), 
                        size=lambda inst, val: setattr(self.rect, 'size', inst.size))
-        header = Label(text="Яичко-тян\nТаймер варки", font_size='22sp', bold=True, 
+        header = Label(text="Яичко-тян\nТаймер варки", font_size=sp(22), bold=True, # sp
                        color=get_color_from_hex(ACCENT_COLOR), size_hint=(1, 0.2), halign='left')
         header.bind(size=header.setter('text_size'))
         
-        btn_persona = Button(text="Какое яйцо ты сегодня?", size_hint=(1, None), height=50, 
+        btn_persona = Button(text="Какое яйцо ты сегодня?", size_hint=(1, None), height=dp(50), # dp
                              background_normal='', background_color=(0,0,0,0), 
-                             color=get_color_from_hex(TEXT_COLOR), halign='left')
+                             color=get_color_from_hex(TEXT_COLOR), halign='left', font_size=sp(16)) # sp
         btn_persona.bind(size=btn_persona.setter('text_size'))
         btn_persona.bind(on_press=self.open_persona_direct)
         
-        btn_settings = Button(text="Время приготовления", size_hint=(1, None), height=50, 
+        btn_settings = Button(text="Время приготовления", size_hint=(1, None), height=dp(50), # dp
                               background_normal='', background_color=(0,0,0,0), 
-                              color=get_color_from_hex(TEXT_COLOR), halign='left')
+                              color=get_color_from_hex(TEXT_COLOR), halign='left', font_size=sp(16)) # sp
         btn_settings.bind(size=btn_settings.setter('text_size'))
         btn_settings.bind(on_press=self.go_to_settings)
         
-        btn_instr = Button(text="Инструкция", size_hint=(1, None), height=50, 
+        btn_instr = Button(text="Инструкция", size_hint=(1, None), height=dp(50), # dp
                            background_normal='', background_color=(0,0,0,0), 
-                           color=get_color_from_hex(TEXT_COLOR), halign='left')
+                           color=get_color_from_hex(TEXT_COLOR), halign='left', font_size=sp(16)) # sp
         btn_instr.bind(size=btn_instr.setter('text_size'))
         btn_instr.bind(on_press=self.open_instr_direct)
         
@@ -531,6 +506,7 @@ class SideMenu(FloatLayout):
         self.panel.add_widget(Widget())
         self.add_widget(self.panel)
         self.bind(x_pos=self.update_pos)
+        
     def open_persona_direct(self, instance):
         self.close_menu()
         App.get_running_app().root.get_screen('main').open_daily_egg()
@@ -542,7 +518,7 @@ class SideMenu(FloatLayout):
         self.bg_rect.size = self.bg.size
     def update_pos(self, *args): self.panel.x = self.x_pos
     def on_touch_down(self, touch):
-        if self.x_pos > -self.menu_width + 10:
+        if self.x_pos > -self.menu_width + dp(10): # dp
             if self.bg.collide_point(*touch.pos) and not self.panel.collide_point(*touch.pos):
                 self.close_menu()
                 return True
@@ -562,40 +538,39 @@ class SideMenu(FloatLayout):
         anim.bind(on_complete=lambda x,y: setattr(self.bg, 'size_hint', (None, None)))
         anim.start(self)
 
-
 class BottomSheet(FloatLayout):
     sheet_y = NumericProperty(0)
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.HIDDEN_Y = -440 
+        self.HIDDEN_Y = dp(-440) # dp
         self.OPEN_Y = 0
         self.sheet_y = self.HIDDEN_Y
         self.overlay = Button(background_color=(0,0,0,0), size_hint=(None, None), size=(0,0), pos_hint={'x':0, 'y':0})
         self.overlay.bind(on_press=self.check_close_touch)
         self.add_widget(self.overlay)
-        self.sheet_container = BoxLayout(orientation='vertical', size_hint=(1, None), height=500, 
-                                        padding=15, spacing=12)
+        self.sheet_container = BoxLayout(orientation='vertical', size_hint=(1, None), height=dp(500), # dp
+                                        padding=dp(15), spacing=dp(12)) # dp
         with self.sheet_container.canvas.before:
             Color(*get_color_from_hex(CARD_BG))
             self.bg_rect = RoundedRectangle(pos=self.sheet_container.pos, size=self.sheet_container.size, 
-                                            radius=[25, 25, 0, 0])
+                                            radius=[dp(25), dp(25), 0, 0]) # dp
         self.sheet_container.bind(pos=lambda inst, val: setattr(self.bg_rect, 'pos', inst.pos), 
                                  size=lambda inst, val: setattr(self.bg_rect, 'size', inst.size))
-        swipe_area = BoxLayout(orientation='vertical', size_hint=(1, None), height=60)
-        hint = Label(text="Смахните для настройки", font_size='14sp', 
+        swipe_area = BoxLayout(orientation='vertical', size_hint=(1, None), height=dp(60)) # dp
+        hint = Label(text="Смахните для настройки", font_size=sp(14), # sp
                      color=get_color_from_hex(SUBTEXT_COLOR), size_hint=(1, 0.6))
         
-        self.mini_timer_label = Label(text="04:00", font_size='18sp', color=get_color_from_hex(ACCENT_COLOR), 
+        self.mini_timer_label = Label(text="04:00", font_size=sp(18), color=get_color_from_hex(ACCENT_COLOR), # sp
                                       size_hint=(1, 0.4), bold=True, opacity=0)
         swipe_area.add_widget(hint)
         swipe_area.add_widget(self.mini_timer_label)
         
         scroll = ScrollView(size_hint=(1, 1))
-        settings_content = BoxLayout(orientation='vertical', size_hint_y=None, spacing=20, padding=[0, 10])
+        settings_content = BoxLayout(orientation='vertical', size_hint_y=None, spacing=dp(20), padding=[0, dp(10)]) # dp
         settings_content.bind(minimum_height=settings_content.setter('height'))
-        cool_box = BoxLayout(size_hint=(1, None), height=40, padding=[0, 0, 20, 0])
+        cool_box = BoxLayout(size_hint=(1, None), height=dp(40), padding=[0, 0, dp(20), 0]) # dp
         cool_label = Label(text="Охлаждённый", halign='left', color=get_color_from_hex(TEXT_COLOR), 
-                           size_hint_x=0.7, text_size=(200, None))
+                           size_hint_x=0.7, text_size=(dp(200), None)) # dp
         cool_box.add_widget(cool_label)
         switch_container = AnchorLayout(anchor_x='right', anchor_y='center', size_hint_x=0.3)
         self.cooling_switch = YellowSwitch()
@@ -603,14 +578,14 @@ class BottomSheet(FloatLayout):
         cool_box.add_widget(switch_container)
         settings_content.add_widget(cool_box)
         settings_content.add_widget(self.make_section("Тип яйца"))
-        type_btns = BoxLayout(size_hint=(1, None), height=45, spacing=10)
+        type_btns = BoxLayout(size_hint=(1, None), height=dp(45), spacing=dp(10)) # dp
         self.btn_chicken = RoundedButton(text="Куриное", bg_color=get_color_from_hex(ACCENT_COLOR), color=(0,0,0,1))
         self.btn_quail = RoundedButton(text="Перепелиное", bg_color=get_color_from_hex(DISABLED_COLOR), color=(1,1,1,1))
         type_btns.add_widget(self.btn_chicken)
         type_btns.add_widget(self.btn_quail)
         settings_content.add_widget(type_btns)
         settings_content.add_widget(self.make_section("Размер"))
-        size_btns = BoxLayout(size_hint=(1, None), height=45, spacing=10)
+        size_btns = BoxLayout(size_hint=(1, None), height=dp(45), spacing=dp(10)) # dp
         self.size_btns = {}
         for name in ['C3', 'C2', 'C1', 'C0', 'CB']:
             btn = RoundedButton(text=name, 
@@ -620,11 +595,11 @@ class BottomSheet(FloatLayout):
             size_btns.add_widget(btn)
         settings_content.add_widget(size_btns)
         settings_content.add_widget(self.make_section("Количество яиц"))
-        count_box = BoxLayout(size_hint=(1, None), height=50, spacing=20)
-        self.btn_minus = RoundedButton(text="-", size_hint=(None, 1), width=60, 
+        count_box = BoxLayout(size_hint=(1, None), height=dp(50), spacing=dp(20)) # dp
+        self.btn_minus = RoundedButton(text="-", size_hint=(None, 1), width=dp(60), # dp
                                       bg_color=get_color_from_hex(DISABLED_COLOR))
-        self.lbl_count = Label(text="1", font_size='20sp', bold=True, color=get_color_from_hex(TEXT_COLOR))
-        self.btn_plus = RoundedButton(text="+", size_hint=(None, 1), width=60, 
+        self.lbl_count = Label(text="1", font_size=sp(20), bold=True, color=get_color_from_hex(TEXT_COLOR)) # sp
+        self.btn_plus = RoundedButton(text="+", size_hint=(None, 1), width=dp(60), # dp
                                       bg_color=get_color_from_hex(DISABLED_COLOR))
         count_box.add_widget(Widget())
         count_box.add_widget(self.btn_minus)
@@ -643,24 +618,24 @@ class BottomSheet(FloatLayout):
         swipe_area.bind(on_touch_up=self.on_touch_up_handle)
         
     def check_close_touch(self, instance):
-        if self.sheet_y > self.HIDDEN_Y + 100:
+        if self.sheet_y > self.HIDDEN_Y + dp(100): # dp
             self.close_sheet()
     def make_section(self, title):
-        lbl = Label(text=title, size_hint=(1, None), height=30, font_size='14sp', bold=True, 
+        lbl = Label(text=title, size_hint=(1, None), height=dp(30), font_size=sp(14), bold=True, # dp, sp
                     color=get_color_from_hex(TEXT_COLOR), halign='left')
         lbl.bind(size=lbl.setter('text_size'))
         return lbl
     def update_sheet_pos(self, *args): 
         self.sheet_container.pos = (0, self.sheet_y)
         dist_from_bottom = self.sheet_y - self.HIDDEN_Y
-        if dist_from_bottom < 20:
+        if dist_from_bottom < dp(20): # dp
             self.mini_timer_label.opacity = 0
-        elif dist_from_bottom > 150:
+        elif dist_from_bottom > dp(150): # dp
             self.mini_timer_label.opacity = 1
         else:
-            self.mini_timer_label.opacity = (dist_from_bottom - 20) / 130
+            self.mini_timer_label.opacity = (dist_from_bottom - dp(20)) / dp(130) # dp
 
-        if self.sheet_y > self.HIDDEN_Y + 50:
+        if self.sheet_y > self.HIDDEN_Y + dp(50): # dp
             self.overlay.size_hint = (1, 1)
         else:
             self.overlay.size_hint = (None, None)
@@ -678,7 +653,7 @@ class BottomSheet(FloatLayout):
             app = App.get_running_app()
             if app and app.root and app.root.get_screen('main'):
                 progress = (self.sheet_y - self.HIDDEN_Y) / abs(self.HIDDEN_Y)
-                offset = progress * 420
+                offset = progress * dp(420) # dp
                 app.root.get_screen('main').move_content(offset)
                 app.root.get_screen('main').update_opacity_on_swipe(progress)
             return True
@@ -696,7 +671,6 @@ class BottomSheet(FloatLayout):
         anim.start(self)
         App.get_running_app().root.get_screen('main').animate_content_down()
 
-
 class MainScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -707,11 +681,11 @@ class MainScreen(Screen):
         self.is_finished = False
         self.egg_type, self.egg_size, self.is_cooled = 'chicken', 'C1', False
         self.egg_count = 1
-        self.timer_label = Label(text="04:00", font_size='70sp', bold=True, color=get_color_from_hex(TEXT_COLOR))
+        self.timer_label = Label(text="04:00", font_size=sp(70), bold=True, color=get_color_from_hex(TEXT_COLOR)) # sp
         
         self.mode_buttons = []
         for i, name in enumerate(["Всмятку", "В мешочек", "Вкрутую"]):
-            btn = SmoothModeButton(text=name, group='mode', font_size='13sp')
+            btn = SmoothModeButton(text=name, group='mode', font_size=sp(13)) # sp
             if i == 0:
                 btn.bg_rgba = get_color_from_hex(ACCENT_COLOR)
                 btn.color = (0,0,0,1)
@@ -727,23 +701,21 @@ class MainScreen(Screen):
         mode_images = ['images/Всмятку.png', 'images/Вмешочек.png', 'images/Вкрутую.png']
         for img_name in mode_images:
             slide = AnchorLayout(anchor_x='center', anchor_y='center')
-            egg_img = Image(source=img_name, size_hint=(None, None), size=(180, 220))
+            egg_img = Image(source=img_name, size_hint=(None, None), size=(dp(180), dp(220))) # dp
             slide.add_widget(egg_img)
             self.carousel.add_widget(slide)
         
         self.root_layout = FloatLayout()
         
-        # --- СТРОГАЯ ВЕРТИКАЛЬНАЯ КОМПОНОВКА ---
-        self.content_layout = BoxLayout(orientation='vertical', padding=[0, 10, 0, 0], spacing=10, pos_hint={'x': 0, 'top': 1})
+        self.content_layout = BoxLayout(orientation='vertical', padding=[0, dp(10), 0, 0], spacing=dp(10), pos_hint={'x': 0, 'top': 1}) # dp
         
-        # 1. ТОП БАР (Фиксированная высота 60)
-        top_bar = BoxLayout(size_hint=(1, None), height=60, padding=[15, 0])
-        menu_container = AnchorLayout(anchor_x='left', anchor_y='center', size_hint=(None, 1), width=60)
-        menu_btn = BurgerButton(size_hint=(None, 1), width=50)
+        top_bar = BoxLayout(size_hint=(1, None), height=dp(60), padding=[dp(15), 0]) # dp
+        menu_container = AnchorLayout(anchor_x='left', anchor_y='center', size_hint=(None, 1), width=dp(60)) # dp
+        menu_btn = BurgerButton(size_hint=(None, 1), width=dp(50)) # dp
         menu_btn.bind(on_press=self.open_side_menu)
         menu_container.add_widget(menu_btn)
-        title_label = Label(text="Яичко-тян", font_size='18sp', bold=True, color=get_color_from_hex(ACCENT_COLOR))
-        persona_container = AnchorLayout(anchor_x='right', anchor_y='center', size_hint=(None, 1), width=60)
+        title_label = Label(text="Яичко-тян", font_size=sp(18), bold=True, color=get_color_from_hex(ACCENT_COLOR)) # sp
+        persona_container = AnchorLayout(anchor_x='right', anchor_y='center', size_hint=(None, 1), width=dp(60)) # dp
         self.persona_btn = CircularAvatar()
         self.persona_btn.bind(on_press=self.open_daily_egg_direct)
         persona_container.add_widget(self.persona_btn)
@@ -752,40 +724,30 @@ class MainScreen(Screen):
         top_bar.add_widget(title_label)
         top_bar.add_widget(persona_container)
         
-        # 2. КНОПКИ РЕЖИМОВ (Фиксированная высота 60)
-        modes_bar = BoxLayout(size_hint=(1, None), height=60, padding=[20, 10], spacing=15)
+        modes_bar = BoxLayout(size_hint=(1, None), height=dp(60), padding=[dp(20), dp(10)], spacing=dp(15)) # dp
         for btn in self.mode_buttons: modes_bar.add_widget(btn)
         
-        # 3. ЯЙЦО (Занимает всё свободное место по высоте)
-        # Карусель автоматически растянется и заполнит пространство между кнопками и таймером
-        
-        # 4. ТАЙМЕР (Фиксированная высота ~100)
-        self.timer_box = BoxLayout(size_hint=(1, None), height=120)
+        self.timer_box = BoxLayout(size_hint=(1, None), height=dp(120)) # dp
         self.timer_box.add_widget(self.timer_label)
 
-        # 5. КНОПКА СТАРТ (Фиксированная высота)
-        btn_container = BoxLayout(size_hint=(1, None), height=80, padding=[50, 10])
+        btn_container = BoxLayout(size_hint=(1, None), height=dp(80), padding=[dp(50), dp(10)]) # dp
         self.action_btn = RoundedButton(text="СТАРТ", bg_color=get_color_from_hex(ACCENT_COLOR), 
-                                     color=(0,0,0,1), font_size='22sp', bold=True,
-                                     size_hint=(1, None), height=60)
+                                     color=(0,0,0,1), font_size=sp(22), bold=True, # sp
+                                     size_hint=(1, None), height=dp(60)) # dp
         self.action_btn.bind(on_press=self.toggle_timer)
         btn_container.add_widget(self.action_btn)
         
-        # 6. ПУСТОЕ МЕСТО ПОД "ШТОРКУ" (Фиксированная высота 60)
-        # Шторка будет лежать поверх этого места
-        spacer_for_sheet = Widget(size_hint=(1, None), height=60)
+        spacer_for_sheet = Widget(size_hint=(1, None), height=dp(60)) # dp
 
-        # СОБИРАЕМ МАТРЕШКУ
         self.content_layout.add_widget(top_bar)
         self.content_layout.add_widget(modes_bar)
-        self.content_layout.add_widget(self.carousel) # Растягиваемый элемент
+        self.content_layout.add_widget(self.carousel) 
         self.content_layout.add_widget(self.timer_box)
         self.content_layout.add_widget(btn_container)
         self.content_layout.add_widget(spacer_for_sheet)
         
         self.root_layout.add_widget(self.content_layout)
 
-        # ШТОРКА (Лежит в FloatLayout поверх всего, внизу)
         self.bottom_sheet = BottomSheet(size_hint=(1, 1), pos_hint={'x': 0, 'y': 0})
         self.root_layout.add_widget(self.bottom_sheet)
         
@@ -816,7 +778,7 @@ class MainScreen(Screen):
         self.action_btn.opacity = alpha
         self.carousel.opacity = 1.0 - progress
     def animate_content_up(self): 
-        Animation(y=420, duration=0.3, t='out_cubic').start(self.content_layout)
+        Animation(y=dp(420), duration=0.3, t='out_cubic').start(self.content_layout) # dp
         Animation(opacity=0, duration=0.1).start(self.action_btn)
         Animation(opacity=0, duration=0.2).start(self.carousel)
     def animate_content_down(self): 
@@ -938,21 +900,21 @@ class MainScreen(Screen):
 
     def show_instruction(self, instance=None):
         content = AnchorLayout(anchor_x='center', anchor_y='center')
-        box = BoxLayout(orientation='vertical', padding=20, spacing=20, size_hint=(None, None), size=(280, 250))
+        box = BoxLayout(orientation='vertical', padding=dp(20), spacing=dp(20), size_hint=(None, None), size=(dp(280), dp(250))) # dp
         with box.canvas.before:
             Color(*get_color_from_hex(CARD_BG)) 
-            self.instr_bg_rect = RoundedRectangle(pos=box.pos, size=box.size, radius=[20])
+            self.instr_bg_rect = RoundedRectangle(pos=box.pos, size=box.size, radius=[dp(20)]) # dp
             Color(*get_color_from_hex(ACCENT_COLOR))
-            self.instr_line_rect = Line(rounded_rectangle=(box.x, box.y, box.width, box.height, 20), width=2)
+            self.instr_line_rect = Line(rounded_rectangle=(box.x, box.y, box.width, box.height, dp(20)), width=dp(2)) # dp
         def update_box(inst, val):
             if hasattr(self, 'instr_bg_rect'):
                 self.instr_bg_rect.pos = inst.pos
                 self.instr_bg_rect.size = inst.size
             if hasattr(self, 'instr_line_rect'):
-                self.instr_line_rect.rounded_rectangle = (inst.x, inst.y, inst.width, inst.height, 20)
+                self.instr_line_rect.rounded_rectangle = (inst.x, inst.y, inst.width, inst.height, dp(20)) # dp
         box.bind(pos=update_box, size=update_box)
         lbl = Label(text="[b]Инструкция[/b]\n\n1. Вскипятите воду\n2. Посолите\n3. Опустите яйцо\n4. Нажмите СТАРТ", 
-                    markup=True, halign='center')
+                    markup=True, halign='center', font_size=sp(16)) # sp
         btn = RoundedButton(text="ПОНЯТНО", size_hint=(1, 0.3), bg_color=get_color_from_hex(ACCENT_COLOR), 
                      color=(0,0,0,1), bold=True)
         box.add_widget(lbl)
@@ -963,7 +925,6 @@ class MainScreen(Screen):
         btn.bind(on_press=popup.dismiss)
         popup.open()
 
-    # ИЗМЕНЕНО: логика для маскота
     def update_corner_icon(self):
         today = datetime.now().strftime('%Y-%m-%d')
         if store.exists('daily_egg') and store.get('daily_egg')['date'] == today:
@@ -980,35 +941,31 @@ class MainScreen(Screen):
              self.show_egg_reveal_dialog()
              
     def _create_popup_frame(self, bg_color_hex):
-        # ИЗМЕНЕНО: жесткие размеры для попапа
         content = AnchorLayout(anchor_x='center', anchor_y='center')
-        box = BoxLayout(orientation='vertical', padding=[20, 20, 20, 20], spacing=10, size_hint=(None, None), size=(320, 480))
+        box = BoxLayout(orientation='vertical', padding=[dp(20), dp(20), dp(20), dp(20)], spacing=dp(10), size_hint=(None, None), size=(dp(320), dp(480))) # dp
         with box.canvas.before:
             Color(*get_color_from_hex(bg_color_hex)) 
-            bg_rect = RoundedRectangle(pos=box.pos, size=box.size, radius=[20])
+            bg_rect = RoundedRectangle(pos=box.pos, size=box.size, radius=[dp(20)]) # dp
             Color(*get_color_from_hex(ACCENT_COLOR))
-            line_rect = Line(rounded_rectangle=(box.x, box.y, box.width, box.height, 20), width=2)
+            line_rect = Line(rounded_rectangle=(box.x, box.y, box.width, box.height, dp(20)), width=dp(2)) # dp
         def update_box(inst, val, bg=bg_rect, ln=line_rect):
             bg.pos = inst.pos
             bg.size = inst.size
-            ln.rounded_rectangle = (inst.x, inst.y, inst.width, inst.height, 20)
+            ln.rounded_rectangle = (inst.x, inst.y, inst.width, inst.height, dp(20)) # dp
         box.bind(pos=update_box, size=update_box)
         return content, box
 
     def show_egg_reveal_dialog(self):
         content, box = self._create_popup_frame(BLACK_BG)
         
-        # 1. ЗАГОЛОВОК
-        lbl = Label(text="[b]Какое яйцо ты сегодня?[/b]", markup=True, halign='center', font_size='18sp', 
-                    size_hint=(1, None), height=50)
+        lbl = Label(text="[b]Какое яйцо ты сегодня?[/b]", markup=True, halign='center', font_size=sp(18), # sp
+                    size_hint=(1, None), height=dp(50)) # dp
         
-        # 2. КАРТИНКА МАСКОТА (заполняет доступное место, но не давит на кнопку)
         egg_container = AnchorLayout(size_hint=(1, 1))
-        egg_img = Image(source="images/маскот.jpeg", size_hint=(None, None), size=(180, 240))
+        egg_img = Image(source="images/маскот.jpeg", size_hint=(None, None), size=(dp(180), dp(240))) # dp
         egg_container.add_widget(egg_img)
         
-        # 3. КНОПКА
-        btn = RoundedButton(text="УЗНАТЬ", size_hint=(1, None), height=50, bg_color=get_color_from_hex(ACCENT_COLOR), 
+        btn = RoundedButton(text="УЗНАТЬ", size_hint=(1, None), height=dp(50), bg_color=get_color_from_hex(ACCENT_COLOR), # dp
                      color=(0,0,0,1), bold=True)
         
         popup = Popup(title='', content=content, size_hint=(1, 1), separator_height=0, 
@@ -1028,7 +985,6 @@ class MainScreen(Screen):
         idx = random.randint(0, len(EGG_PERSONAS) - 1)
         store.put('daily_egg', date=datetime.now().strftime('%Y-%m-%d'), persona_idx=idx)
         self.show_egg_result(idx, animate=True)
-        # ВОТ ТУТ ИЗМЕНЕНИЕ: обновляем иконку сразу
         self.persona_btn.source = EGG_PERSONAS[idx]['img']
 
     def show_egg_result(self, idx, animate=False):
@@ -1038,32 +994,24 @@ class MainScreen(Screen):
             fw = Firework(pos_hint={'center_x': 0.5, 'center_y': 0.5})
             content.add_widget(fw)
         
-        # СТРОГАЯ ВЕРТИКАЛЬНАЯ ПОСЛЕДОВАТЕЛЬНОСТЬ
-        
-        # 1. КАРТИНКА (фиксированная высота)
-        img_box = AnchorLayout(size_hint=(1, None), height=180)
-        egg_img = Image(source=persona['img'], size_hint=(None, None), size=(150, 150))
+        img_box = AnchorLayout(size_hint=(1, None), height=dp(180)) # dp
+        egg_img = Image(source=persona['img'], size_hint=(None, None), size=(dp(150), dp(150))) # dp
         img_box.add_widget(egg_img)
         
-        # 2. НАЗВАНИЕ (фиксированная высота)
-        lbl_title = Label(text=f"[b][size=20]{persona['name']}[/size][/b]", markup=True, 
-                    halign='center', valign='middle', size_hint=(1, None), height=40)
+        lbl_title = Label(text=f"[b][size={int(sp(20))}]{persona['name']}[/size][/b]", markup=True, # sp
+                    halign='center', valign='middle', size_hint=(1, None), height=dp(40)) # dp
         
-        # 3. ОПИСАНИЕ (динамическая высота, но ограничено)
-        lbl_desc = Label(text=persona['desc'], halign='center', valign='top', 
-                         size_hint=(1, None), height=80)
+        lbl_desc = Label(text=persona['desc'], halign='center', valign='top', font_size=sp(15), # sp
+                         size_hint=(1, None), height=dp(80)) # dp
         lbl_desc.bind(size=lbl_desc.setter('text_size'))
         
-        # 4. ПРОБЕЛ (заполняет пустоту)
         spacer = Widget(size_hint=(1, 1))
         
-        # 5. СЕРАЯ НАДПИСЬ (фиксированная высота)
         lbl_hint = Label(text="Следующая попытка наступит завтра!!", 
-                         font_size='11sp', color=get_color_from_hex(SUBTEXT_COLOR), 
-                         size_hint=(1, None), height=20)
+                         font_size=sp(11), color=get_color_from_hex(SUBTEXT_COLOR), # sp
+                         size_hint=(1, None), height=dp(20)) # dp
         
-        # 6. КНОПКА (фиксированная высота)
-        btn = RoundedButton(text="ПОНЯТНО!", size_hint=(1, None), height=50, 
+        btn = RoundedButton(text="ПОНЯТНО!", size_hint=(1, None), height=dp(50), # dp
                      bg_color=get_color_from_hex(ACCENT_COLOR), color=(0,0,0,1))
         
         popup = Popup(title='', separator_height=0, content=content, size_hint=(1, 1), 
@@ -1090,7 +1038,6 @@ class EggChanApp(App):
         return sm
     def on_pause(self): return self.root.get_screen('main').on_pause()
     def on_resume(self): return self.root.get_screen('main').on_resume()
-
 
 if __name__ == '__main__':
     EggChanApp().run()
