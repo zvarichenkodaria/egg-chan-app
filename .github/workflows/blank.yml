@@ -5,26 +5,23 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04 # Используем проверенную систему
+    runs-on: ubuntu-22.04
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 1. Ставим Java 17 (нужна для новых Android SDK)
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      # 2. Ставим Python 3.10 (стандартный для 22.04)
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      # 3. Ставим системные библиотеки (включая libtool-bin, который мы искали)
       - name: Install System Dependencies
         run: |
           sudo apt-get update
@@ -32,31 +29,21 @@ jobs:
             zip unzip autoconf libtool libtool-bin pkg-config \
             libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
 
-      # 4. Ставим Buildozer и Cython
       - name: Install Buildozer
         run: |
           pip install --upgrade pip
-          # Ставим версию с GitHub для поддержки новых SDK
           pip install git+https://github.com/kivy/buildozer.git@master
           pip install cython==0.29.33 virtualenv
 
-      # 5. Чистим старые попытки (на всякий случай)
-      - name: Cleanup
-        run: buildozer android clean
+      # ШАГ CLEANUP УДАЛЕН!
 
-      # 6. Запускаем сборку!
       - name: Build APK
         env:
-          # Пароли (Buildozer подхватит их сам)
           P4A_RELEASE_KEYSTORE: my-release-key.jks
           P4A_RELEASE_KEYSTORE_PASSWD: "58Dasha58."
           P4A_RELEASE_KEYALIAS: my-key-alias
           P4A_RELEASE_KEYALIAS_PASSWD: "58Dasha58."
         run: |
-          # Даем права на всякий случай
-          chmod +x main.py
-          
-          # Запускаем. yes нужен для подтверждения лицензий, если автомат не сработает
           yes | buildozer android release
 
       - name: Upload APK
