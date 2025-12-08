@@ -3,46 +3,25 @@ on: [push]
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
-    
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Environment
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y python3-pip python3-setuptools git zip unzip openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
-          
-          pip3 install --upgrade pip
-          # СТАВИМ BUILDOZER ПРЯМО С GITHUB (там исправлен баг с sdkmanager)
-          pip3 install --user --upgrade git+https://github.com/kivy/buildozer.git@master
-          pip3 install --user --upgrade cython==0.29.33 virtualenv
+      - name: Build with Buildozer Docker
+        # Мы используем официальный контейнер, где всё уже настроено
+        uses: docker://kivy/buildozer:latest
+        with:
+          args: buildozer android release
+        env:
+          # Пароли для подписи
+          P4A_RELEASE_KEYSTORE: my-release-key.jks
+          P4A_RELEASE_KEYSTORE_PASSWD: "58Dasha58."
+          P4A_RELEASE_KEYALIAS: my-key-alias
+          P4A_RELEASE_KEYALIAS_PASSWD: "58Dasha58."
+          # Права доступа (чтобы не было ошибки пользователя)
+          USER: root
 
-      - name: Fix permissions
-        run: |
-          sudo chown -R $USER:$USER .
-
-      - name: Accept Android Licenses
-        run: |
-          # На всякий случай создаем лицензии вручную
-          mkdir -p ~/.buildozer/android/platform/android-sdk/licenses
-          echo "8933bad161af4178b1185d1a37fbf41ea5269c55" > ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
-          echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
-          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" >> ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
-
-      - name: Build APK
-        run: |
-          export PATH=$PATH:~/.local/bin
-          
-          export P4A_RELEASE_KEYSTORE=my-release-key.jks
-          export P4A_RELEASE_KEYSTORE_PASSWD="58Dasha58."
-          export P4A_RELEASE_KEYALIAS=my-key-alias
-          export P4A_RELEASE_KEYALIAS_PASSWD="58Dasha58."
-          
-          # Запускаем с yes, чтобы точно проскочить все вопросы
-          yes | buildozer android release
-        
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
